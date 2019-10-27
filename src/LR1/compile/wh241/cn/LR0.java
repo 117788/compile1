@@ -13,15 +13,22 @@ public class LR0 {
     //项目集
     // ArrayList<Project> projectC;
     //项目集族
-    public ArrayList<ArrayList<Project>> projectCC= new ArrayList<>();
+    private ArrayList<ArrayList<Project>> projectCC= new ArrayList<>();
     //终结符集合
-    public TreeSet<Character> VnSet= new TreeSet<>();
+    private TreeSet<Character> VnSet= new TreeSet<>();
     //非终结符集合
-    public TreeSet<Character> VtSet =  new TreeSet<>();
+    private TreeSet<Character> VtSet =  new TreeSet<>();
     //所有符号集合
-    public TreeSet<Character> allSet = new TreeSet<>();
+    private TreeSet<Character> allSet = new TreeSet<>();
     //开始符号
     public Character startSymbol = 'S';
+    //GO函数状态集合
+    public ArrayList<GoObject> GoList = new ArrayList<>();
+    //ACTION字表
+    private String[][] ACTION;
+    //GOTO字表
+    private String[][] GOTO;
+
     /**
      * 临时测试主程序
      */
@@ -58,7 +65,9 @@ public class LR0 {
         }
          */
         lr0.CalProjectCC();
-
+        lr0.initTable();
+        lr0.CalTable();
+        /*
         for (ArrayList<Project> projects : lr0.projectCC){
             for (Project projectItem : projects){
                 Integer num = projectItem.getNum();
@@ -68,6 +77,21 @@ public class LR0 {
             }
         }
 
+         */
+        System.out.println("---ACTION表---");
+        for (int i = 0; i < lr0.ACTION.length; i++) {
+            for (int j = 0; j < lr0.ACTION[i].length; j++) {
+                System.out.printf("%-10s",lr0.ACTION[i][j]);
+            }
+            System.out.println("");
+        }
+        System.out.println("---GOTO表---");
+        for (int i = 0; i < lr0.GOTO.length; i++) {
+            for (int j = 0; j < lr0.GOTO[i].length; j++) {
+                System.out.printf("%-10s",lr0.GOTO[i][j]);
+            }
+            System.out.println("");
+        }
     }
     /**
      * 初始化LR1文法
@@ -185,9 +209,10 @@ public class LR0 {
      * 判断项目集族中是否已有此项目集
      * 通过循环比较内容得出
      */
-    public Boolean IsExist(ArrayList<Project> goResult){
+    public Integer IsExist(ArrayList<Project> goResult){
         int count = 0;
-        for (ArrayList<Project> projects : projectCC){
+        for (int k = 0; k < projectCC.size(); k++) {
+            ArrayList<Project> projects = projectCC.get(k);
             count = 0;
             if (projects.size() == goResult.size()){
                 for (int i = 0; i < projects.size(); i++) {
@@ -201,11 +226,11 @@ public class LR0 {
                     }
                 }
                 if (count == goResult.size()){
-                    return true;
+                    return k;
                 }
             }
         }
-        return false;
+        return -1;
     }
     /**
      * LR(0)项目集规范族
@@ -219,8 +244,15 @@ public class LR0 {
         for (int i = 0; i < projectCC.size(); i++) {
             for (Character charItem : allSet){
                 ArrayList<Project> goResult = GO(projectCC.get(i), charItem);
-                if (!goResult.isEmpty() && !IsExist(goResult)){
+                Integer integer = IsExist(goResult);
+                if (integer != -1){
+                    GoObject goObject = new GoObject(i, charItem, integer);
+                    GoList.add(goObject);
+                }
+                if (!goResult.isEmpty() && IsExist(goResult) == -1){
                     projectCC.add(goResult);
+                    GoObject goObject = new GoObject(i, charItem, projectCC.size() - 1);
+                    GoList.add(goObject);
                     /*
                     for (Project projectItem : goResult){
                         Integer num = projectItem.getNum();
@@ -229,6 +261,120 @@ public class LR0 {
                         System.out.println(LR1Str +" : "+ num + "---" + place);
                     }
                      */
+                }
+            }
+        }
+    }
+    /**
+     *初始化ACTION子表和GOTO子表
+     */
+    public void initTable(){
+        //初始化ACTION子表
+        TreeSet<Character> characters = new TreeSet<>(VtSet);
+        characters.remove('ε');
+        characters.add('#');
+        ACTION = new String[projectCC.size() + 1][characters.size() + 1];
+        for (int i = 0; i < ACTION.length; i++) {
+            for (int j = 0; j < ACTION[i].length; j++) {
+                if (j == 0 && i >= 1){
+                    ACTION[i][j] = (i - 1) + "";
+                }else{
+                    ACTION[i][j] = "";
+                }
+            }
+        }
+        int m = 1;
+        for (Character charItem : characters){
+            ACTION[0][m] = charItem.toString();
+            m++;
+        }
+        //初始化GOTO子表
+        TreeSet<Character> characters1 = new TreeSet<>(VnSet);
+        characters1.remove(startSymbol);
+        GOTO = new String[projectCC.size() + 1][characters1.size() + 1];
+        for (int i = 0; i < GOTO.length; i++) {
+            for (int j = 0; j < GOTO[i].length; j++) {
+                if (j == 0 && i >= 1){
+                    GOTO[i][j] = (i - 1) + "";
+                }else{
+                    GOTO[i][j] = "";
+                }
+            }
+        }
+        m = 1;
+        for (Character Vn : characters1){
+            GOTO[0][m] = Vn.toString();
+            m++;
+        }
+    }
+    /**
+     * 计算ACTION子表和GOTO子表
+     */
+    public void CalTable(){
+        //1.计算GOTO子表
+        for (GoObject goObject : GoList){
+            Integer k = goObject.getK();
+            Character a = goObject.getA();
+            Integer j = goObject.getJ();
+            if (VnSet.contains(a)){
+                for (int i = 0; i < GOTO.length; i++) {
+                    for (int m = 0; m < GOTO[i].length; m++) {
+                        if (GOTO[i][0].equals(k.toString()) && GOTO[0][m].equals(a.toString())){
+                            GOTO[i][m] = j.toString();
+                        }
+                    }
+                }
+            }
+        }
+        //2.计算ACTION表
+        //遍历项目集族，取出项目集
+        for (int p = 0; p < projectCC.size(); p++) {
+            ArrayList<Project> projects = projectCC.get(p);
+            //遍历项目集，取出项目
+            for (Project projectItem : projects){
+                Integer num = projectItem.getNum();
+                Integer place = projectItem.getPlace();
+                //产生式
+                String LR1Str = LR1List.get(num);
+                String[] split = LR1Str.split("->");
+                //产生式右部
+                String rightStr = split[1];
+                //规则(1)
+                if (place < rightStr.length()){
+                    //判断圆点后面第一个字符
+                    Character afterCirclePoint = rightStr.charAt(place);
+                    if (VtSet.contains(afterCirclePoint)){
+                        for (GoObject goObject : GoList){
+                            Integer k = goObject.getK();
+                            Character a = goObject.getA();
+                            Integer j = goObject.getJ();
+                            if (p == k && afterCirclePoint == a){
+                                for (int i = 0; i < ACTION.length; i++) {
+                                    for (int m = 0; m < ACTION[m].length; m++) {
+                                        if (ACTION[i][0].equals(k.toString()) && ACTION[0][m].equals(a.toString())){
+                                            ACTION[i][m] = "s" + j.toString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    //规则(2)
+                    for (int i = 0; i < ACTION.length; i++) {
+                        for (int m = 0; m < ACTION[m].length; m++) {
+                            if (ACTION[i][0].equals(p + "") && m >= 1 ){
+                                if (num != 0){
+                                    ACTION[i][m] = "r" + num;
+                                }else{
+                                    //规则(3)
+                                    if (ACTION[0][m].equals("#")){
+                                        ACTION[i][m] = "acc";
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

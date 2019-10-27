@@ -10,15 +10,6 @@ public class Project {
         this.num = num;
         this.place = place;
     }
-
-    public void setNum(Integer num) {
-        this.num = num;
-    }
-
-    public void setPlace(Integer place) {
-        this.place = place;
-    }
-
     public Integer getNum() {
         return num;
     }
