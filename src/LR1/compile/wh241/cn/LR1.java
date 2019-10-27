@@ -1,6 +1,7 @@
 package LR1.compile.wh241.cn;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.TreeSet;
 
@@ -8,7 +9,7 @@ public class LR1 {
     /**
      * 定义数组结构
      */
-    private ArrayList<String> LR1List = new ArrayList<>();
+    public ArrayList<String> LR1List = new ArrayList<>();
     //项目
     //new Project project;
     //项目集
@@ -26,9 +27,9 @@ public class LR1 {
     //GO函数状态集合
     private ArrayList<GoObject> GoList = new ArrayList<>();
     //ACTION字表
-    private String[][] ACTION;
+    public String[][] ACTION;
     //GOTO字表
-    private String[][] GOTO;
+    public String[][] GOTO;
     //First集
     private HashMap<Character, TreeSet<Character>> firstCollection  = new HashMap<>();
     //Follow集
@@ -75,10 +76,20 @@ public class LR1 {
      * 初始化LR1文法
      */
     public void initLR1List(){
+
         LR1List.add("E->S");
         LR1List.add("S->BB");
         LR1List.add("B->aB");
         LR1List.add("B->b");
+        /*
+        LR1List.add("E->E+T");
+        LR1List.add("E->T");
+        LR1List.add("T->T*F");
+        LR1List.add("T->F");
+        LR1List.add("F->(E)");
+        LR1List.add("F->i");
+
+         */
     }
     /**
      * 求终结符和非终结符
@@ -199,15 +210,28 @@ public class LR1 {
                     for (int j = 0; j < goResult.size(); j++) {
                         if (projects.get(i).getNum().equals(goResult.get(j).getNum())){
                             if (projects.get(i).getPlace().equals(goResult.get(j).getPlace())){
-                                TreeSet<Character> findStrI = projects.get(i).getFindStr();
-                                TreeSet<Character> findStrJ = projects.get(j).getFindStr();
-                                for (Character I : findStrI){
-                                    for (Character J : findStrJ){
-                                        if (I == J){
-                                            count++;
-                                            break;
+                                //int count1 = 0;
+                                Object[] objectI = projects.get(i).getFindStr().toArray();
+                                Object[] objectJ = goResult.get(j).getFindStr().toArray();
+                                /*
+                                if (objectI.length == objectJ.length){
+                                    for (int m = 0; m < objectI.length; m++) {
+                                        for (int n = 0; n < objectJ.length; n++) {
+                                            if (objectI[m].equals(objectJ[n])){
+                                                count1++;
+                                                break;
+                                            }
                                         }
                                     }
+                                    if (count1 == objectI.length){
+                                        count++;
+                                        break;
+                                    }
+                                }
+                                 */
+                                if (Arrays.equals(objectI, objectJ)){
+                                    count++;
+                                    break;
                                 }
                             }
                         }
@@ -231,18 +255,21 @@ public class LR1 {
         projects.add(project);
         CLOSURE(projects);
         projectCC.add(projects);
+        allSet.remove('E');
         for (int i = 0; i < projectCC.size(); i++) {
             for (Character charItem : allSet){
                 ArrayList<Project> goResult = GO(projectCC.get(i), charItem);
-                Integer integer = IsExist(goResult);
-                if (integer != -1){
-                    GoObject goObject = new GoObject(i, charItem, integer);
-                    GoList.add(goObject);
-                }
-                if (!goResult.isEmpty() && IsExist(goResult) == -1){
-                    projectCC.add(goResult);
-                    GoObject goObject = new GoObject(i, charItem, projectCC.size() - 1);
-                    GoList.add(goObject);
+                if (!goResult.isEmpty()){
+                    Integer integer = IsExist(goResult);
+                    if (integer != -1){
+                        GoObject goObject = new GoObject(i, charItem, integer);
+                        GoList.add(goObject);
+                    }
+                    if (!goResult.isEmpty() && IsExist(goResult) == -1){
+                        projectCC.add(goResult);
+                        GoObject goObject = new GoObject(i, charItem, projectCC.size() - 1);
+                        GoList.add(goObject);
+                    }
                 }
             }
         }
@@ -363,6 +390,31 @@ public class LR1 {
                 }
             }
         }
+    }
+    /**
+     * 查找ACTION表，并返回内容
+     */
+    public String searchACTION(Integer status, Character a){
+        String actionStr = "";
+        for (int i = 0; i < ACTION.length; i++) {
+            for (int j = 0; j < ACTION[i].length; j++) {
+                if (ACTION[i][0].equals(status.toString()) && ACTION[0][j].equals(a.toString())){
+                    actionStr = ACTION[i][j];
+                }
+            }
+        }
+        return actionStr;
+    }
+    public String searchGOTO(Integer status, Character A){
+        String gotoStr = "";
+        for (int i = 0; i < GOTO.length; i++) {
+            for (int j = 0; j < GOTO[i].length; j++) {
+                if (GOTO[i][0].equals(status.toString()) && GOTO[0][j].equals(A.toString()) ){
+                    gotoStr = GOTO[i][j];
+                }
+            }
+        }
+        return gotoStr;
     }
     /**
      *求First集
