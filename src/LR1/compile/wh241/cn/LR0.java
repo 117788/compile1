@@ -1,13 +1,14 @@
 package LR1.compile.wh241.cn;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.TreeSet;
 
 public class LR0 {
     /**
      * 定义数组结构
      */
-    public ArrayList<String> LR1List = new ArrayList<>();
+    private ArrayList<String> LR1List = new ArrayList<>();
     //项目
     //new Project project;
     //项目集
@@ -21,14 +22,17 @@ public class LR0 {
     //所有符号集合
     private TreeSet<Character> allSet = new TreeSet<>();
     //开始符号
-    public Character startSymbol = 'S';
+    private Character startSymbol = 'S';
     //GO函数状态集合
-    public ArrayList<GoObject> GoList = new ArrayList<>();
+    private ArrayList<GoObject> GoList = new ArrayList<>();
     //ACTION字表
     private String[][] ACTION;
     //GOTO字表
     private String[][] GOTO;
-
+    //First集
+    private HashMap<Character, TreeSet<Character>> firstCollection  = new HashMap<>();
+    //Follow集
+    private HashMap<Character, TreeSet<Character>> followCollection  = new HashMap<>();
     /**
      * 临时测试主程序
      */
@@ -65,6 +69,8 @@ public class LR0 {
         }
          */
         lr0.CalProjectCC();
+        lr0.FirstCollection();
+        lr0.FollowCollection();
         lr0.initTable();
         lr0.CalTable();
         /*
@@ -109,15 +115,15 @@ public class LR0 {
      * 求终结符和非终结符
      */
     public void getVnVt(){
-        for (String LL1Str : LR1List){
-            String[] split = LL1Str.split("->");
+        for (String LR1Str : LR1List){
+            String[] split = LR1Str.split("->");
             //先求终结符，在产生式左边
             char vnChar = split[0].charAt(0);
             VnSet.add(vnChar);
             allSet.add(vnChar);
         }
-        for (String LL1Str : LR1List){
-            String[] split = LL1Str.split("->");
+        for (String LR1Str : LR1List){
+            String[] split = LR1Str.split("->");
             //然后求终结符，在产生式右边
             String vtStr = split[1];
             for (int i = 0; i < vtStr.length(); i++) {
@@ -365,7 +371,11 @@ public class LR0 {
                         for (int m = 0; m < ACTION[m].length; m++) {
                             if (ACTION[i][0].equals(p + "") && m >= 1 ){
                                 if (num != 0){
-                                    ACTION[i][m] = "r" + num;
+                                    //产生式左部
+                                    String VnStr = split[0];
+                                    if(followCollection.get(VnStr.charAt(0)).contains(ACTION[0][m].charAt(0))){
+                                        ACTION[i][m] = "r" + num;
+                                    }
                                 }else{
                                     //规则(3)
                                     if (ACTION[0][m].equals("#")){
@@ -378,6 +388,219 @@ public class LR0 {
                 }
             }
         }
+    }
+    /**
+     *求First集
+     */
+    public void FirstCollection(){
+        for (String LR1Str: LR1List) {
+            String[] split = LR1Str.split("->");
+            //产生式左边为非终结符
+            char Vn = split[0].charAt(0);
+            //计算Vn的First集
+            if (!firstCollection.containsKey(Vn)){
+                CalFirstCollection(Vn);
+            }
+        }
+    }
+    /**
+     *计算某非终结符T的First集
+     *T->X1X2X3...
+     * 1) X1是终结符，则将X1添加到First(T)中
+     * 2) X1是非终结符
+     *  2.1 First(X1)不含ε，则将First(X1)添加到First(T)中
+     *  2.2 First(X1)含ε，则将First(X1)\{ε}添加到First(T)中，并继续判断X2是否未终结符...
+     *  2.3 First(X1)，First(X2)...均含ε，则将First(X1)\{ε}添加到First(T)中
+     */
+    public void CalFirstCollection(Character T){
+        for (String LR1Str: LR1List) {
+            String[] split = LR1Str.split("->");
+            //产生式左边为非终结符
+            char Vn = split[0].charAt(0);
+            //产生式右边为待求项
+            String vtStr = split[1];
+            if (Vn == T){
+                //1) X1是终结符，则将X1添加到First(T)中
+                if (VtSet.contains(vtStr.charAt(0))){
+                    //First集
+                    //首先判断firstCollection中是否含有key Vn，有则添加value，没有则创建一个
+                    if (firstCollection.containsKey(Vn)){
+                        TreeSet<Character> characterTreeSet = firstCollection.get(Vn);
+                        characterTreeSet.add(vtStr.charAt(0));
+                    }else{
+                        TreeSet<Character> firstTreeSet = new TreeSet<>();
+                        firstTreeSet.add(vtStr.charAt(0));
+                        firstCollection.put(Vn, firstTreeSet);
+                    }
+                }else{//2) X1是非终结符
+                    for (int i = 0; i < vtStr.length(); i++) {
+                        char Xn = vtStr.charAt(i);
+                        //2.3 First(X1)，First(X2)...均含ε，则将First(X1)\{ε}添加到First(T)中
+                        if (i == vtStr.length() - 1 && firstCollection.containsKey(Xn)){
+                            if (firstCollection.get(Xn).contains('ε')){
+                                //First集
+                                TreeSet<Character> characterTreeSet = firstCollection.get(Vn);
+                                characterTreeSet.add('ε');
+                            }
+                        }
+                        if (!firstCollection.containsKey(Xn)){
+                            CalFirstCollection(Xn);
+                        }
+                        // 2.1 First(X1)不含ε，则将First(X1)添加到First(T)中
+                        if (!firstCollection.get(Xn).contains('ε')){
+                            if (firstCollection.containsKey(Vn)){
+                                TreeSet<Character> characterTreeSet = firstCollection.get(Vn);
+                                characterTreeSet.addAll(firstCollection.get(Xn));
+                            }else{
+                                TreeSet<Character> characters = new TreeSet<>();
+                                characters.addAll(firstCollection.get(Xn));
+                                firstCollection.put(Vn, characters);
+                            }
+                            break;
+                        }else{
+                            //2.2 First(X1)含ε，则将First(X1)\{ε}添加到First(T)中，并继续判断X2是否未终结符...
+                            if (firstCollection.containsKey(Vn)){
+                                TreeSet<Character> characterTreeSet = firstCollection.get(Vn);
+                                TreeSet<Character> characters = firstCollection.get(Xn);
+                                characters.remove('ε');
+                                characterTreeSet.addAll(characters);
+                                characters.add('ε');
+                            }else{
+                                TreeSet<Character> characters1 = new TreeSet<>();
+                                TreeSet<Character> characters= firstCollection.get(Xn);
+                                characters.remove('ε');
+                                characters1.addAll(characters);
+                                firstCollection.put(Vn, characters1);
+                                characters.add('ε');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /**
+     *求Follow集
+     */
+    public void FollowCollection(){
+        for (String LR1Str : LR1List){
+            String[] split = LR1Str.split("->");
+            //产生式左边为非终结符
+            char Vn = split[0].charAt(0);
+            if (!followCollection.containsKey(Vn)){
+                CalFollowCollection(Vn);
+            }
+        }
+    }
+    /**
+     * 计算Follow集
+     * 1)若B为开始符号S，则将#添加到Follow(B)中
+     * 2)A->αBγ，首先将First(γ)\{ε}添加到Follow(B)中
+     * 2.1 如果ε属于First(γ)，则将Follow(A)添加到Follow(B)中
+     * 3)A->αB，则将Follow(A)添加到Follow(B)中
+     */
+    public void CalFollowCollection(Character B){
+        //1)若B为开始符号S，则将#添加到Follow(B)中
+        if (B == startSymbol){
+            TreeSet<Character> characters = new TreeSet<>();
+            characters.add('#');
+            followCollection.put(B, characters);
+        }
+        for (String LR1Str : LR1List){
+            String[] split = LR1Str.split("->");
+            //产生式左边为非终结符
+            char Vn = split[0].charAt(0);
+            //产生式右边为待求项
+            String vtStr = split[1];
+            for (int i = 0; i < vtStr.length(); i++) {
+                char chari = vtStr.charAt(i);
+                if (chari == B){
+                    if(i < vtStr.length() - 1){
+                        //2)A->αBγ，首先将First(γ)\{ε}添加到Follow(B)中
+                        //γ为终结符,First(γ) = {γ}
+                        if (VtSet.contains(vtStr.charAt(i + 1))){
+                            if (followCollection.containsKey(chari)){
+                                TreeSet<Character> followTreeSet = followCollection.get(chari);
+                                followTreeSet.add(vtStr.charAt(i + 1));
+                            }else{
+                                TreeSet<Character> characters = new TreeSet<>();
+                                characters.add(vtStr.charAt(i + 1));
+                                followCollection.put(chari, characters);
+                            }
+                        }else{
+                            //γ为非终结符
+                            if (followCollection.containsKey(chari)){
+                                TreeSet<Character> followTreeSet = followCollection.get(chari);
+                                TreeSet<Character> firstTreeSet = firstCollection.get(vtStr.charAt(i + 1));
+                                firstTreeSet.remove('ε');
+                                followTreeSet.addAll(firstTreeSet);
+                                firstTreeSet.add('ε');
+                            }else{
+                                TreeSet<Character> characters = new TreeSet<>();
+                                TreeSet<Character> firstTreeSet = firstCollection.get(vtStr.charAt(i + 1));
+                                firstTreeSet.remove('ε');
+                                characters.addAll(firstTreeSet);
+                                firstTreeSet.add('ε');
+                                followCollection.put(chari, characters);
+                            }
+                            if (isFirstNull(vtStr, i + 1)){
+                                //2.1 如果ε属于First(γ)，则将Follow(A)添加到Follow(B)中
+                                if ((firstCollection.get(vtStr.charAt(i + 1)).contains('ε'))){
+                                    if (Vn == B){
+                                        break;
+                                    }
+                                    if (!followCollection.containsKey(Vn)){
+                                        CalFollowCollection(Vn);
+                                    }
+                                    if (followCollection.containsKey(chari)){
+                                        TreeSet<Character> followTreeSet = followCollection.get(chari);
+                                        followTreeSet.addAll(followCollection.get(Vn));
+                                    }else{
+                                        followCollection.put(chari, followCollection.get(Vn));
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                    //判断是否chari后面是否有元素
+                    //3)A->αB，则将Follow(A)添加到Follow(B)中
+                    if (i == vtStr.length() - 1){//chari后面没有元素
+                        if (Vn == B){
+                            break;
+                        }
+                        if (!followCollection.containsKey(Vn)){
+                            CalFollowCollection(Vn);
+                        }
+                        if (followCollection.containsKey(chari)){
+                            TreeSet<Character> followTreeSet = followCollection.get(chari);
+                            followTreeSet.addAll(followCollection.get(Vn));
+                        }else{
+                            followCollection.put(chari, followCollection.get(Vn));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * 判断ε是否属于First(γ)
+     */
+    public boolean isFirstNull(String vtStr, int i){
+        for (int j = i; j < vtStr.length(); j++) {
+            //如果包含非终结符，false
+            if (VtSet.contains(vtStr.charAt(i))){
+                return false;
+            }else{//vtStr.charAt(i)为非终结符
+                if (!firstCollection.get(vtStr.charAt(i)).contains('ε')){
+                    return false;
+                }
+            }
+            if (j == vtStr.length() - 1){
+                return true;
+            }
+        }
+        return true;
     }
 
 }
