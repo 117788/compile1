@@ -53,6 +53,22 @@ public class LR1 {
         ArrayList<Project> b = lr1.GO(projectC, 'a');
 
          */
+        lr1.initTable();
+        lr1.CalTable();
+        System.out.println("---ACTION表---");
+        for (int i = 0; i < lr1.ACTION.length; i++) {
+            for (int j = 0; j < lr1.ACTION[i].length; j++) {
+                System.out.printf("%-10s",lr1.ACTION[i][j]);
+            }
+            System.out.println("");
+        }
+        System.out.println("---GOTO表---");
+        for (int i = 0; i < lr1.GOTO.length; i++) {
+            for (int j = 0; j < lr1.GOTO[i].length; j++) {
+                System.out.printf("%-10s",lr1.GOTO[i][j]);
+            }
+            System.out.println("");
+        }
         System.out.println("");
     }
     /**
@@ -227,6 +243,123 @@ public class LR1 {
                     projectCC.add(goResult);
                     GoObject goObject = new GoObject(i, charItem, projectCC.size() - 1);
                     GoList.add(goObject);
+                }
+            }
+        }
+    }
+    /**
+     *初始化ACTION子表和GOTO子表
+     */
+    public void initTable(){
+        //初始化ACTION子表
+        TreeSet<Character> characters = new TreeSet<>(VtSet);
+        characters.remove('ε');
+        characters.add('#');
+        ACTION = new String[projectCC.size() + 1][characters.size() + 1];
+        for (int i = 0; i < ACTION.length; i++) {
+            for (int j = 0; j < ACTION[i].length; j++) {
+                if (j == 0 && i >= 1){
+                    ACTION[i][j] = (i - 1) + "";
+                }else{
+                    ACTION[i][j] = "";
+                }
+            }
+        }
+        int m = 1;
+        for (Character charItem : characters){
+            ACTION[0][m] = charItem.toString();
+            m++;
+        }
+        //初始化GOTO子表
+        TreeSet<Character> characters1 = new TreeSet<>(VnSet);
+        characters1.remove(startSymbol);
+        GOTO = new String[projectCC.size() + 1][characters1.size() + 1];
+        for (int i = 0; i < GOTO.length; i++) {
+            for (int j = 0; j < GOTO[i].length; j++) {
+                if (j == 0 && i >= 1){
+                    GOTO[i][j] = (i - 1) + "";
+                }else{
+                    GOTO[i][j] = "";
+                }
+            }
+        }
+        m = 1;
+        for (Character Vn : characters1){
+            GOTO[0][m] = Vn.toString();
+            m++;
+        }
+    }
+    /**
+     * 计算ACTION子表和GOTO子表
+     */
+    public void CalTable(){
+        //1.计算GOTO子表
+        for (GoObject goObject : GoList){
+            Integer k = goObject.getK();
+            Character a = goObject.getA();
+            Integer j = goObject.getJ();
+            if (VnSet.contains(a)){
+                for (int i = 0; i < GOTO.length; i++) {
+                    for (int m = 0; m < GOTO[i].length; m++) {
+                        if (GOTO[i][0].equals(k.toString()) && GOTO[0][m].equals(a.toString())){
+                            GOTO[i][m] = j.toString();
+                        }
+                    }
+                }
+            }
+        }
+        //2.计算ACTION表
+        //遍历项目集族，取出项目集
+        for (int p = 0; p < projectCC.size(); p++) {
+            ArrayList<Project> projects = projectCC.get(p);
+            //遍历项目集，取出项目
+            for (Project projectItem : projects){
+                Integer num = projectItem.getNum();
+                Integer place = projectItem.getPlace();
+                TreeSet<Character> findStr = projectItem.getFindStr();
+                //产生式
+                String LR1Str = LR1List.get(num);
+                String[] split = LR1Str.split("->");
+                //产生式右部
+                String rightStr = split[1];
+                //规则(1)
+                if (place < rightStr.length()){
+                    //判断圆点后面第一个字符
+                    Character afterCirclePoint = rightStr.charAt(place);
+                    if (VtSet.contains(afterCirclePoint)){
+                        for (GoObject goObject : GoList){
+                            Integer k = goObject.getK();
+                            Character a = goObject.getA();
+                            Integer j = goObject.getJ();
+                            if (p == k && afterCirclePoint == a){
+                                for (int i = 0; i < ACTION.length; i++) {
+                                    for (int m = 0; m < ACTION[m].length; m++) {
+                                        if (ACTION[i][0].equals(k.toString()) && ACTION[0][m].equals(a.toString())){
+                                            ACTION[i][m] = "s" + j.toString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    //规则(2)
+                    for (int i = 0; i < ACTION.length; i++) {
+                        for (int m = 0; m < ACTION[m].length; m++) {
+                            if (ACTION[i][0].equals(p + "") && m >= 1 ){
+                                if (num != 0){
+                                    if (findStr.contains(ACTION[0][m].charAt(0))){
+                                        ACTION[i][m] = "r" + num;
+                                    }
+                                }else{
+                                    //规则(3)
+                                    if (ACTION[0][m].equals("#")){
+                                        ACTION[i][m] = "acc";
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
