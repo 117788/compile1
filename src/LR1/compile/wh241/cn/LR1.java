@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TreeSet;
 
-public class LR0 {
+public class LR1 {
     /**
      * 定义数组结构
      */
@@ -22,7 +22,7 @@ public class LR0 {
     //所有符号集合
     private TreeSet<Character> allSet = new TreeSet<>();
     //开始符号
-    private Character startSymbol = 'S';
+    private Character startSymbol = 'E';
     //GO函数状态集合
     private ArrayList<GoObject> GoList = new ArrayList<>();
     //ACTION字表
@@ -37,79 +37,32 @@ public class LR0 {
      * 临时测试主程序
      */
     public static void main(String[] args) {
-        LR0 lr0 = new LR0();
-        lr0.initLR1List();
-        lr0.getVnVt();
+        LR1 lr1 = new LR1();
+        lr1.initLR1List();
+        lr1.getVnVt();
+        lr1.FirstCollection();
+        lr1.FollowCollection();
+        lr1.CalProjectCC();
         /*
-        System.out.println("---非终结符集合---");
-        for (Character Vn : lr0.VnSet){
-            System.out.println(Vn);
-        }
-        System.out.println("---终结符集合---");
-        for (Character Vt : lr0.VtSet){
-            System.out.println(Vt);
-        }
-         */
-        /*
-        lr0.CLOSURE(projects);
-        System.out.println("---CLOSURE---");
-        for (Project projectItem : projects){
-            Integer num = projectItem.getNum();
-            Integer place = projectItem.getPlace();
-            String LR1Str = lr0.LR1List.get(num);
-            System.out.println(LR1Str +" : "+ num + "---" + place);
-        }
-        ArrayList<Project> go = lr0.GO(projects, 'E');
-        System.out.println("---GO---");
-        for (Project projectItem : go){
-            Integer num = projectItem.getNum();
-            Integer place = projectItem.getPlace();
-            String LR1Str = lr0.LR1List.get(num);
-            System.out.println(LR1Str +" : "+ num + "---" + place);
-        }
-         */
-        lr0.CalProjectCC();
-        lr0.FirstCollection();
-        lr0.FollowCollection();
-        lr0.initTable();
-        lr0.CalTable();
-        /*
-        for (ArrayList<Project> projects : lr0.projectCC){
-            for (Project projectItem : projects){
-                Integer num = projectItem.getNum();
-                Integer place = projectItem.getPlace();
-                String LR1Str = lr0.LR1List.get(num);
-                System.out.println(LR1Str +" : "+ num + "---" + place);
-            }
-        }
+        TreeSet<Character> characters = new TreeSet<>();
+        characters.add('#');
+        Project project = new Project(0, 0, characters);
+        ArrayList<Project> projectC = new ArrayList<>();
+        projectC.add(project);
+        lr1.CLOSURE(projectC);
+        ArrayList<Project> b = lr1.GO(projectC, 'a');
 
          */
-        System.out.println("---ACTION表---");
-        for (int i = 0; i < lr0.ACTION.length; i++) {
-            for (int j = 0; j < lr0.ACTION[i].length; j++) {
-                System.out.printf("%-10s",lr0.ACTION[i][j]);
-            }
-            System.out.println("");
-        }
-        System.out.println("---GOTO表---");
-        for (int i = 0; i < lr0.GOTO.length; i++) {
-            for (int j = 0; j < lr0.GOTO[i].length; j++) {
-                System.out.printf("%-10s",lr0.GOTO[i][j]);
-            }
-            System.out.println("");
-        }
+        System.out.println("");
     }
     /**
      * 初始化LR1文法
      */
     public void initLR1List(){
-        LR1List.add("S->E");
-        LR1List.add("E->aA");
-        LR1List.add("E->bB");
-        LR1List.add("A->cA");
-        LR1List.add("A->d");
-        LR1List.add("B->cB");
-        LR1List.add("B->d");
+        LR1List.add("E->S");
+        LR1List.add("S->BB");
+        LR1List.add("B->aB");
+        LR1List.add("B->b");
     }
     /**
      * 求终结符和非终结符
@@ -138,37 +91,49 @@ public class LR0 {
     /**
      * 闭包函数
      * 1) 把I中的项目加到CLOSURE(I)
-     * 2) A->α.Bγ属于CLOSURE(I)，对于B->Ω，要把B->Ω加入到CLOSURE(I)
+     * 2) A->α.Bγ,a属于CLOSURE(I)，对于B->Ω，要把B->Ω,b∈ First(γa)加入到CLOSURE(I)
      * @param projectCItem 项目集
      */
     public void CLOSURE(ArrayList<Project> projectCItem){
         for (int i = 0; i < projectCItem.size(); i++) {
             Project projectItem = projectCItem.get(i);
-            //检查项目集中的每个项目是否有A->α.Bγ
+            //检查项目集中的每个项目是否有A->α.Bγ,a
             Integer num = projectItem.getNum();
             Integer place = projectItem.getPlace();
+            TreeSet<Character> findStr = projectItem.getFindStr();
             //产生式
             String LR1Str = LR1List.get(num);
-            //System.out.println(num + "---" + place);
-            //System.out.println(LR1Str);
             String[] split = LR1Str.split("->");
             //产生式右部
             String rightStr = split[1];
             if (place < rightStr.length()){
                 //判断圆点后面第一个字符
-                Character afterCirclePoint = rightStr.charAt(place);
+                char afterCirclePoint = rightStr.charAt(place);
                 if (VnSet.contains(afterCirclePoint)){
-                    //System.out.println("非终结符");
+                    //求First(γa)
+                    TreeSet<Character> FirstSPart = new TreeSet<>();
+                    String newStr = "";
+                    for (int j = place + 1; j < rightStr.length(); j++) {
+                        newStr += rightStr.charAt(i);
+                    }
+                    if (!newStr.equals("")){
+                        TreeSet<Character> FirstSPart1 = CalFirstS(newStr);
+                        if (FirstSPart1.contains('ε')){
+                            FirstSPart.addAll(findStr);
+                        }else {
+                            FirstSPart.addAll(FirstSPart1);
+                        }
+                    }else{
+                        FirstSPart.addAll(findStr);
+                    }
                     for (int j = 0; j < LR1List.size(); j++) {
                         String[] split1 = LR1List.get(j).split("->");
                         if (split1[0].charAt(0) == afterCirclePoint){
-                            Project project = new Project(j, 0,new TreeSet<>());
+                            Project project = new Project(j, 0,FirstSPart);
                             projectCItem.add(project);
                         }
                     }
                 }
-            }else{
-                //System.out.println("可归约");
             }
         }
     }
@@ -186,6 +151,7 @@ public class LR0 {
             Project projectItem = I.get(i);
             Integer num = projectItem.getNum();
             Integer place = projectItem.getPlace();
+            TreeSet<Character> findStr = projectItem.getFindStr();
             //产生式
             String LR1Str = LR1List.get(num);
             String[] split = LR1Str.split("->");
@@ -195,18 +161,10 @@ public class LR0 {
                 //判断圆点后面第一个字符
                 Character afterCirclePoint = rightStr.charAt(place);
                 if (afterCirclePoint == X){
-                    Project newProject = new Project(num, place + 1, new TreeSet<>());
+                    Project newProject = new Project(num, place + 1, findStr);
                     J.add(newProject);
                     CLOSURE(J);
                 }
-            }else{
-                /*
-                Project newProject = new Project(num, place);
-                ArrayList<Project> newList = new ArrayList<>();
-                newList.add(newProject);
-                projectCC.add(newList);
-
-                 */
             }
         }
         return J;
@@ -225,8 +183,16 @@ public class LR0 {
                     for (int j = 0; j < goResult.size(); j++) {
                         if (projects.get(i).getNum().equals(goResult.get(j).getNum())){
                             if (projects.get(i).getPlace().equals(goResult.get(j).getPlace())){
-                                count++;
-                                break;
+                                TreeSet<Character> findStrI = projects.get(i).getFindStr();
+                                TreeSet<Character> findStrJ = projects.get(j).getFindStr();
+                                for (Character I : findStrI){
+                                    for (Character J : findStrJ){
+                                        if (I == J){
+                                            count++;
+                                            break;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -239,10 +205,12 @@ public class LR0 {
         return -1;
     }
     /**
-     * LR(0)项目集规范族
+     * LR(1)项目集规范族
      */
     public void CalProjectCC(){
-        Project project = new Project(0, 0,new TreeSet<>());
+        TreeSet<Character> characters = new TreeSet<>();
+        characters.add('#');
+        Project project = new Project(0, 0, characters);
         ArrayList<Project> projects = new ArrayList<>();
         projects.add(project);
         CLOSURE(projects);
@@ -259,132 +227,6 @@ public class LR0 {
                     projectCC.add(goResult);
                     GoObject goObject = new GoObject(i, charItem, projectCC.size() - 1);
                     GoList.add(goObject);
-                    /*
-                    for (Project projectItem : goResult){
-                        Integer num = projectItem.getNum();
-                        Integer place = projectItem.getPlace();
-                        String LR1Str = LR1List.get(num);
-                        System.out.println(LR1Str +" : "+ num + "---" + place);
-                    }
-                     */
-                }
-            }
-        }
-    }
-    /**
-     *初始化ACTION子表和GOTO子表
-     */
-    public void initTable(){
-        //初始化ACTION子表
-        TreeSet<Character> characters = new TreeSet<>(VtSet);
-        characters.remove('ε');
-        characters.add('#');
-        ACTION = new String[projectCC.size() + 1][characters.size() + 1];
-        for (int i = 0; i < ACTION.length; i++) {
-            for (int j = 0; j < ACTION[i].length; j++) {
-                if (j == 0 && i >= 1){
-                    ACTION[i][j] = (i - 1) + "";
-                }else{
-                    ACTION[i][j] = "";
-                }
-            }
-        }
-        int m = 1;
-        for (Character charItem : characters){
-            ACTION[0][m] = charItem.toString();
-            m++;
-        }
-        //初始化GOTO子表
-        TreeSet<Character> characters1 = new TreeSet<>(VnSet);
-        characters1.remove(startSymbol);
-        GOTO = new String[projectCC.size() + 1][characters1.size() + 1];
-        for (int i = 0; i < GOTO.length; i++) {
-            for (int j = 0; j < GOTO[i].length; j++) {
-                if (j == 0 && i >= 1){
-                    GOTO[i][j] = (i - 1) + "";
-                }else{
-                    GOTO[i][j] = "";
-                }
-            }
-        }
-        m = 1;
-        for (Character Vn : characters1){
-            GOTO[0][m] = Vn.toString();
-            m++;
-        }
-    }
-    /**
-     * 计算ACTION子表和GOTO子表
-     */
-    public void CalTable(){
-        //1.计算GOTO子表
-        for (GoObject goObject : GoList){
-            Integer k = goObject.getK();
-            Character a = goObject.getA();
-            Integer j = goObject.getJ();
-            if (VnSet.contains(a)){
-                for (int i = 0; i < GOTO.length; i++) {
-                    for (int m = 0; m < GOTO[i].length; m++) {
-                        if (GOTO[i][0].equals(k.toString()) && GOTO[0][m].equals(a.toString())){
-                            GOTO[i][m] = j.toString();
-                        }
-                    }
-                }
-            }
-        }
-        //2.计算ACTION表
-        //遍历项目集族，取出项目集
-        for (int p = 0; p < projectCC.size(); p++) {
-            ArrayList<Project> projects = projectCC.get(p);
-            //遍历项目集，取出项目
-            for (Project projectItem : projects){
-                Integer num = projectItem.getNum();
-                Integer place = projectItem.getPlace();
-                //产生式
-                String LR1Str = LR1List.get(num);
-                String[] split = LR1Str.split("->");
-                //产生式右部
-                String rightStr = split[1];
-                //规则(1)
-                if (place < rightStr.length()){
-                    //判断圆点后面第一个字符
-                    Character afterCirclePoint = rightStr.charAt(place);
-                    if (VtSet.contains(afterCirclePoint)){
-                        for (GoObject goObject : GoList){
-                            Integer k = goObject.getK();
-                            Character a = goObject.getA();
-                            Integer j = goObject.getJ();
-                            if (p == k && afterCirclePoint == a){
-                                for (int i = 0; i < ACTION.length; i++) {
-                                    for (int m = 0; m < ACTION[m].length; m++) {
-                                        if (ACTION[i][0].equals(k.toString()) && ACTION[0][m].equals(a.toString())){
-                                            ACTION[i][m] = "s" + j.toString();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }else{
-                    //规则(2)
-                    for (int i = 0; i < ACTION.length; i++) {
-                        for (int m = 0; m < ACTION[m].length; m++) {
-                            if (ACTION[i][0].equals(p + "") && m >= 1 ){
-                                if (num != 0){
-                                    //产生式左部
-                                    String VnStr = split[0];
-                                    if(followCollection.get(VnStr.charAt(0)).contains(ACTION[0][m].charAt(0))){
-                                        ACTION[i][m] = "r" + num;
-                                    }
-                                }else{
-                                    //规则(3)
-                                    if (ACTION[0][m].equals("#")){
-                                        ACTION[i][m] = "acc";
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -438,7 +280,6 @@ public class LR0 {
                         //2.3 First(X1)，First(X2)...均含ε，则将First(X1)\{ε}添加到First(T)中
                         if (i == vtStr.length() - 1 && firstCollection.containsKey(Xn)){
                             if (firstCollection.get(Xn).contains('ε')){
-                                //First集
                                 TreeSet<Character> characterTreeSet = firstCollection.get(Vn);
                                 characterTreeSet.add('ε');
                             }
@@ -462,16 +303,27 @@ public class LR0 {
                             if (firstCollection.containsKey(Vn)){
                                 TreeSet<Character> characterTreeSet = firstCollection.get(Vn);
                                 TreeSet<Character> characters = firstCollection.get(Xn);
-                                characters.remove('ε');
-                                characterTreeSet.addAll(characters);
-                                characters.add('ε');
+                                if (characters.contains('ε')){
+                                    characters.remove('ε');
+                                    characterTreeSet.addAll(characters);
+                                    characters.add('ε');
+                                }else{
+                                    characterTreeSet.addAll(characters);
+                                }
+
                             }else{
                                 TreeSet<Character> characters1 = new TreeSet<>();
                                 TreeSet<Character> characters= firstCollection.get(Xn);
-                                characters.remove('ε');
-                                characters1.addAll(characters);
-                                firstCollection.put(Vn, characters1);
-                                characters.add('ε');
+                                if (characters.contains('ε')){
+                                    characters.remove('ε');
+                                    characters1.addAll(characters);
+                                    firstCollection.put(Vn, characters1);
+                                    characters.add('ε');
+                                }else{
+                                    characters1.addAll(characters);
+                                    firstCollection.put(Vn, characters1);
+                                }
+
                             }
                         }
                     }
@@ -532,15 +384,24 @@ public class LR0 {
                             if (followCollection.containsKey(chari)){
                                 TreeSet<Character> followTreeSet = followCollection.get(chari);
                                 TreeSet<Character> firstTreeSet = firstCollection.get(vtStr.charAt(i + 1));
-                                firstTreeSet.remove('ε');
-                                followTreeSet.addAll(firstTreeSet);
-                                firstTreeSet.add('ε');
+                                if (firstTreeSet.contains('ε')){
+                                    firstTreeSet.remove('ε');
+                                    followTreeSet.addAll(firstTreeSet);
+                                    firstTreeSet.add('ε');
+                                }else{
+                                    followTreeSet.addAll(firstTreeSet);
+                                }
+
                             }else{
                                 TreeSet<Character> characters = new TreeSet<>();
                                 TreeSet<Character> firstTreeSet = firstCollection.get(vtStr.charAt(i + 1));
-                                firstTreeSet.remove('ε');
-                                characters.addAll(firstTreeSet);
-                                firstTreeSet.add('ε');
+                                if (firstTreeSet.contains('ε')){
+                                    firstTreeSet.remove('ε');
+                                    characters.addAll(firstTreeSet);
+                                    firstTreeSet.add('ε');
+                                }else{
+                                    characters.addAll(firstTreeSet);
+                                }
                                 followCollection.put(chari, characters);
                             }
                             if (isFirstNull(vtStr, i + 1)){
@@ -611,44 +472,41 @@ public class LR0 {
      *  2.2 First(X1)含ε，则将First(X1)\{ε}添加到First(α)中，并继续判断X2是否未终结符...
      *  2.3 First(X1)，First(X2)...均含ε，则将First(X1)\{ε}添加到First(α)中
      */
-    public HashMap<String, TreeSet<Character>> CalFirstS(){
-        HashMap<String, TreeSet<Character>> FirstSMap = new HashMap<>();
-        for (String LR1Str: LR1List) {
-            String[] split = LR1Str.split("->");
-            //产生式左边为非终结符
-            char Vn = split[0].charAt(0);
-            //产生式右边为待求项
-            String vtStr = split[1];
-            //FirstS集
-            TreeSet<Character> firstSTree = new TreeSet<>();
-            FirstSMap.put(LR1Str, firstSTree);
-            //1) X1是终结符，则将X1添加到First(α)中
-            if (VtSet.contains(vtStr.charAt(0))){
-                firstSTree.add(vtStr.charAt(0));
-            }else{//2) X1是非终结符
-                for (int i = 0; i < vtStr.length(); i++) {
-                    char Xn = vtStr.charAt(i);
-                    //2.3 First(X1)，First(X2)...均含ε，则将First(X1)\{ε}添加到First(α)中
-                    if (i == vtStr.length() - 1 ){
-                        if (firstCollection.get(Xn).contains('ε')){
-                            firstSTree.add('ε');
-                        }
+    public TreeSet<Character> CalFirstS(String LR1Str){
+        //FirstS集
+        TreeSet<Character> firstSTree = new TreeSet<>();
+        //产生式右边为待求项
+        String vtStr = LR1Str;
+        //1) X1是终结符，则将X1添加到First(α)中
+        if (VtSet.contains(vtStr.charAt(0))){
+            firstSTree.add(vtStr.charAt(0));
+        }else{//2) X1是非终结符
+            for (int i = 0; i < vtStr.length(); i++) {
+                char Xn = vtStr.charAt(i);
+                //2.3 First(X1)，First(X2)...均含ε，则将First(X1)\{ε}添加到First(α)中
+                if (i == vtStr.length() - 1 ){
+                    if (firstCollection.get(Xn).contains('ε')){
+                        firstSTree.add('ε');
                     }
-                    // 2.1 First(X1)不含ε，则将First(X1)添加到First(α)中
-                    if (!firstCollection.get(Xn).contains('ε')){
-                        firstSTree.addAll(firstCollection.get(Xn));
-                        break;
-                    }else{
-                        //2.2 First(X1)含ε，则将First(X1)\{ε}添加到First(α)中，并继续判断X2是否未终结符...
-                        TreeSet<Character> characters = firstCollection.get(Xn);
+                }
+                // 2.1 First(X1)不含ε，则将First(X1)添加到First(α)中
+                if (!firstCollection.get(Xn).contains('ε')){
+                    firstSTree.addAll(firstCollection.get(Xn));
+                    break;
+                }else{
+                    //2.2 First(X1)含ε，则将First(X1)\{ε}添加到First(α)中，并继续判断X2是否未终结符...
+                    TreeSet<Character> characters = firstCollection.get(Xn);
+                    if (characters.contains('ε')){
                         characters.remove('ε');
                         firstSTree.addAll(characters);
                         characters.add('ε');
+                    }else{
+                        firstSTree.addAll(characters);
                     }
                 }
             }
         }
-        return FirstSMap;
+        return firstSTree;
     }
 
 }
