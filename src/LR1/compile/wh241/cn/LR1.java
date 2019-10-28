@@ -39,7 +39,7 @@ public class LR1 {
      */
     public static void main(String[] args) {
         LR1 lr1 = new LR1();
-        lr1.initLR1List();
+        //lr1.initLR1List();
         lr1.getVnVt();
         lr1.FirstCollection();
         lr1.FollowCollection();
@@ -75,13 +75,16 @@ public class LR1 {
     /**
      * 初始化LR1文法
      */
-    public void initLR1List(){
-
+    public void initLR1List(String LR1Str){
+        String[] split = LR1Str.split("\n");
+        for (int i = 0; i < split.length; i++) {
+            LR1List.add(split[i]);
+        }/*
         LR1List.add("E->S");
         LR1List.add("S->BB");
         LR1List.add("B->aB");
         LR1List.add("B->b");
-        /*
+        //--------
         LR1List.add("E->E+T");
         LR1List.add("E->T");
         LR1List.add("T->T*F");
